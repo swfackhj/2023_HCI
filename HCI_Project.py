@@ -151,15 +151,14 @@ def runGame() :
             for i, bxy in enumerate(bullet_xy) :
                 bxy[0] += 15
                 bullet_xy[i][0] = bxy[0]
+                if bxy[1] > bat_y and bxy[1] < bat_y + bat_height :
+                    bullet_xy.remove(bxy)
+                    isShotBat = True
                 if bxy[0] >= pad_width :
                     try :
                         bullet_xy.remove(bxy)
                     except :
                         pass
-                if bxy[0] > bat_x :
-                    if bxy[1] > bat_y and bxy[1] < bat_y + pad_height :
-                        bullet_xy.remove(bxy)
-                        isShotBat = True
 
         if x + aircraft_width > bat_x :
             if (y > bat_y and y < bat_y+bat_height) or \
