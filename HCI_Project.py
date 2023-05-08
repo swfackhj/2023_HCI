@@ -3,6 +3,7 @@ import random
 import schedule
 from time import sleep
 import time
+from pygame.locals import *
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -21,6 +22,81 @@ fireball2_width = 86
 fireball2_height = 60
 
 isTrue = False
+
+def game_start():
+    start_screen = pygame.display.set_mode((pad_width,pad_height))
+    
+    pygame.font.init() #폰트 초기화
+    
+    start_button_img = pygame.image.load('start_button.png')
+    start_button_img = pygame.transform.scale(start_button_img, (120,50))
+    instructions_button = pygame.image.load('instructions_button.png')
+    instructions_button = pygame.transform.scale(instructions_button, (120,50))
+
+    logo_img = pygame.image.load('logo.png')
+    logo_img = pygame.transform.scale(logo_img, (170,170))
+   
+
+    #start_button 위치 지정
+    start_button_rect = start_button_img.get_rect()
+    start_button_rect.center = (pad_width/2, 320)
+    
+    #instructions_button 위치 지정
+    instructions_button_rect = instructions_button.get_rect()
+    instructions_button_rect.center = (pad_width/2, 400)
+    logo_img_rect = logo_img.get_rect()
+    logo_img_rect.center = (pad_width/2, 120)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                pygame.sys.exit()
+            #만약 event type이 내가 마우스 버튼을 누른거라면
+            if event.type == MOUSEBUTTONDOWN:
+                if start_button_rect.collidepoint(event.pos):
+                    return
+                elif instructions_button_rect.collidepoint(event.pos):
+                    return instructions()
+            
+        #start screen에 검은색 바탕 칠하기
+        start_screen.fill((255,255,255)) 
+        #글자 나타내기: start_button_img를 start_button_rect에 
+        start_screen.blit(start_button_img, start_button_rect)
+        start_screen.blit(instructions_button, instructions_button_rect)
+        start_screen.blit(logo_img, logo_img_rect)
+        
+        pygame.display.update() 
+
+def instructions():
+    instructions_screen = pygame.display.set_mode((pad_width,pad_height))
+    pygame.font.init() #폰트 초기화
+    
+    back_button_img = pygame.image.load('back_button.png')
+    back_button_img = pygame.transform.scale(back_button_img, (100,50))
+
+    #back_button 위치 지정
+    back_button_rect = back_button_img.get_rect()
+    back_button_rect.center = (950, 450)
+    
+    #instructions_font = pygame.font.SysFont('freesansbold.ttf', 30,True, True)
+    #instructions_message = 'How to play'
+    #instructions_object = instructions_font.render(instructions_message,True, (0,0,0))
+    
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                pygame.quit()
+                pygame.sys.exit()
+            if event.type == MOUSEBUTTONDOWN:
+                # 만약 start button이 클릭되었다면 게임을 시작
+                if back_button_rect.collidepoint(event.pos):
+                    return game_start()
+        instructions_screen.fill((255,255,255))
+        instructions_screen.blit(back_button_img, back_button_rect)
+        #instructions_screen.blit(instructions_object, back_button_rect)
+        pygame.display.update()  
 
 def scheduling() :
     global isTrue
@@ -174,16 +250,16 @@ def runGame():
             for i, bxy in enumerate(bullet_xy):
                 bxy[0] += 15
                 bullet_xy[i][0] = bxy[0]
-                if bxy[0] >= pad_width:
-                    try:
-                        bullet_xy.remove(bxy)
-                    except:
-                        pass
                 if bxy[0] > bat_x:
-                    if bxy[1] > bat_y and bxy[1] < bat_y + pad_height:
+                    if bxy[1] > bat_y and bxy[1] < bat_y + bat_height :
                         score = score + 100
                         bullet_xy.remove(bxy)
                         isShotBat = True
+                    if bxy[0] >= pad_width :
+                        try :
+                            bullet_xy.remove(bxy)
+                        except :
+                            pass
 
         if x + aircraft_width > bat_x:
             if (y > bat_y and y < bat_y + bat_height) or \
@@ -261,6 +337,9 @@ def initGame():
     global gamepad, aircraft, clock, background1, background2
     global bat, fires, bullet, boom
     global myFont
+
+    #게임 시작화면
+    game_start()
 
     fires = []
 
