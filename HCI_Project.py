@@ -4,6 +4,8 @@ import schedule
 from time import sleep
 import time
 from pygame.locals import *
+import cv2
+import pykinect_azure as pykinect
 
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
@@ -138,7 +140,35 @@ def airplane(x, y):
     global gamepad, aircraft
     gamepad.blit(aircraft, (x, y))
 
-def runGame():
+def init_kinect():
+    pykinect.initialize_libraries(track_body=True)
+    device_config = pykinect.default_configuration
+    device_config.color_resolution = pykinect.K4A_COLOR_RESOLUTION_1080P
+    device_config.depth_mode = pykinect.K4A_DEPTH_MODE_WFOV_2X2BINNED
+    device = pykinect.start_device(config=device_config)
+    bodyTracker = pykinect.start_body_tracker()
+    return device, bodyTracker
+
+def get_squat_status(device,body_frame, bodyTracker):
+    capture = device.update()
+    body_frame = bodyTracker.update()
+    squat_status = False
+
+    for body_id in range(body_frame.get_num_bodies()):
+        color_skeleton_2d = body_frame.get_body2d(body_id, pykinect.K4A_CALIBRATION_TYPE_COLOR).numpy()
+        joint_knee_left = color_skeleton_2d[pykinect.K4ABT_JOINT_KNEE_LEFT, :]
+        joint_knee_right = color_skeleton_2d[pykinect.K4ABT_JOINT_KNEE_RIGHT, :]
+        squat_status = is_squatting(joint_knee_left, joint_knee_right)
+
+    return squat_status
+
+def is_squatting(joint_knee_left, joint_knee_right):
+    squat_threshold = 80
+    if joint_knee_left[1] > squat_threshold and joint_knee_right[1] > squat_threshold:
+        return True
+    return False
+
+def runGame(device, bodyTracker):
     global gamepad, aircraft, clock, background1, background2
     global bat, fires, bullet, boom
     global myFont, isTrue, end_time
@@ -186,6 +216,22 @@ def runGame():
             bullet_xy.append([bullet_x, bullet_y])
             isTrue = False
         schedule.run_pending()
+
+        # Get capture
+        capture = device.update()
+
+        # Get body tracker frame
+        body_frame = bodyTracker.update()
+
+        squat_status = get_squat_status(device, body_frame, bodyTracker)
+
+        if squat_status:
+            y_change = 5
+        else:
+            y_change = -5
+        y += y_change
+
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 crashed = True
@@ -336,7 +382,8 @@ def runGame():
 def initGame():
     global gamepad, aircraft, clock, background1, background2
     global bat, fires, bullet, boom
-    global myFont
+    global myFont , isTrue, device, bodyTracker  # Add 'device' and 'bodyTracker' to the global variables
+    device, bodyTracker = init_kinect()
 
     #게임 시작화면
     game_start()
@@ -364,7 +411,7 @@ def initGame():
 
     myFont = pygame.font.SysFont("arial", 30, True, False)
 
-    runGame()
+    runGame(device, bodyTracker)
 
 schedule.every(1).seconds.do(scheduling)
 initGame()
