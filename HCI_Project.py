@@ -116,7 +116,7 @@ def dispMessage(text):
     TextRect.center = ((pad_width / 2), (pad_height / 2))
     gamepad.blit(TextSurf, TextRect)
 
-    pygame.display.update()
+    pygame.display.flip()
     sleep(2)
     runGame()
 
@@ -150,23 +150,23 @@ def init_kinect():
     return device, bodyTracker
 
 def get_squat_status(device,body_frame, bodyTracker):
-    capture = device.update()
-    body_frame = bodyTracker.update()
     squat_status = False
 
     for body_id in range(body_frame.get_num_bodies()):
         color_skeleton_2d = body_frame.get_body2d(body_id, pykinect.K4A_CALIBRATION_TYPE_COLOR).numpy()
+        joint_wrist_left = color_skeleton_2d[pykinect.K4ABT_JOINT_WRIST_LEFT,:]
+        joint_wrist_right = color_skeleton_2d[pykinect.K4ABT_JOINT_WRIST_RIGHT,:]
         joint_knee_left = color_skeleton_2d[pykinect.K4ABT_JOINT_KNEE_LEFT, :]
         joint_knee_right = color_skeleton_2d[pykinect.K4ABT_JOINT_KNEE_RIGHT, :]
-        squat_status = is_squatting(joint_knee_left, joint_knee_right)
-
+        squat_status = is_squatting(joint_wrist_left, joint_wrist_right, joint_knee_left, joint_knee_right)
     return squat_status
 
-def is_squatting(joint_knee_left, joint_knee_right):
-    squat_threshold = 80
-    if joint_knee_left[1] > squat_threshold and joint_knee_right[1] > squat_threshold:
+def is_squatting(joint_wrist_left,joint_wrist_right,joint_knee_left, joint_knee_right):
+    squat_threshold = 150
+    if joint_knee_left[1] - joint_wrist_left[1] < squat_threshold and joint_knee_right[1] - joint_wrist_right[1] < squat_threshold:
         return True
     return False
+
 
 def runGame(device, bodyTracker):
     global gamepad, aircraft, clock, background1, background2
@@ -235,20 +235,7 @@ def runGame(device, bodyTracker):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 crashed = True
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    y_change = -5
-                elif event.key == pygame.K_DOWN:
-                    y_change = 5
-                elif event.key == pygame.K_LCTRL:
-                    bullet_x = x + aircraft_width
-                    bullet_y = y + aircraft_height / 2
-                    bullet_xy.append([bullet_x, bullet_y])
-                elif event.key == pygame.K_SPACE:
-                    sleep(5)
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
-                    y_change = 0
+
         
         current_time = pygame.time.get_ticks()
         elapsed_time = current_time - last_time
@@ -260,8 +247,7 @@ def runGame(device, bodyTracker):
             score = score + 300
             last_time = current_time
 
-        y += y_change
-        gamepad.fill(WHITE)
+        #gamepad.fill(WHITE)
 
         text_Title = myFont.render("Score: " + str(score), True, RED)
         text_rect = text_Title.get_rect()
@@ -373,8 +359,8 @@ def runGame(device, bodyTracker):
 
         drawObject(aircraft, x, y)
 
-        pygame.display.update()
-        clock.tick(60)
+        pygame.display.flip()
+        clock.tick(120)
 
     pygame.quit()
     quit()
@@ -385,15 +371,12 @@ def initGame():
     global myFont , isTrue, device, bodyTracker  # Add 'device' and 'bodyTracker' to the global variables
     device, bodyTracker = init_kinect()
 
+    fires = []
+
     #게임 시작화면
     game_start()
 
-    fires = []
-
     pygame.init()
-
-    gamepad = pygame.display.set_mode((pad_width, pad_height))
-    pygame.display.set_caption('PyFlying')
 
     aircraft = pygame.image.load('plane.png')
     clock = pygame.time.Clock()
@@ -405,6 +388,9 @@ def initGame():
     fires.append((1, pygame.image.load('fireball2.png')))
     bullet = pygame.image.load('bullet.png')
     boom = pygame.image.load('boom.png')
+
+    gamepad = pygame.display.set_mode((pad_width, pad_height))
+    pygame.display.set_caption('PyFlying')
 
     for n in range(3):
         fires.append((n + 2, None))
